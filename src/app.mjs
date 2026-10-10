@@ -19,7 +19,8 @@ function update() {
   $('clear').disabled = !editor.value;
   $('download').disabled = !editor.value;
   $('copy').disabled = !editor.value;
-  $('selection').textContent = `${number(characters(editor.value.slice(editor.selectionStart, editor.selectionEnd)))}자 선택`;
+  const selected = characters(editor.value.slice(editor.selectionStart, editor.selectionEnd));
+  $('selection').textContent = selected ? `선택 ${number(selected)}자 / 전체 ${number(s.characters)}자` : `${number(s.characters)}자`;
 }
 function remember(previous) { undo.push(previous); if (undo.length > 60) undo.shift(); redo = []; }
 function change(next, message) {
