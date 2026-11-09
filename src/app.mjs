@@ -1,4 +1,4 @@
-import { stats, clean, replaceLiteral, characters } from './core.mjs';
+import { stats, clean, replaceLiteral, characters, analyze, removeZeroWidthSpaces } from './core.mjs';
 const $ = id => document.getElementById(id);
 const editor = $('editor');
 let undo = [];
@@ -21,6 +21,7 @@ function update() {
   $('copy').disabled = !editor.value;
   const selected = characters(editor.value.slice(editor.selectionStart, editor.selectionEnd));
   $('selection').textContent = selected ? `선택 ${number(selected)}자 / 전체 ${number(s.characters)}자` : `${number(s.characters)}자`;
+  updateInspection();
 }
 function remember(previous) { undo.push(previous); if (undo.length > 60) undo.shift(); redo = []; }
 function change(next, message) {
@@ -55,4 +56,22 @@ $('download').addEventListener('click', () => {
 editor.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.isComposing) { e.preventDefault(); $(e.shiftKey ? 'redo' : 'undo').click(); }
 });
+function updateInspection() {
+  const report = analyze(editor.value, Number($('line-limit').value));
+  for (const key of ['graphemes', 'codePoints', 'utf16', 'bytes']) $('inspect-' + key).textContent = number(report[key]);
+  $('normalization-note').textContent = report.needsNormalization ? 'NFC 변환 시 문자 구성이 달라집니다. 원문을 저장한 뒤 필요할 때만 적용하세요.' : 'NFC 기준으로 이미 정규화되어 있습니다.';
+  $('normalize').disabled = !report.needsNormalization;
+  $('remove-zero').disabled = !editor.value.includes('\u200b');
+  const findings = $('findings'); findings.replaceChildren();
+  if (!report.findings.length) { const p = document.createElement('p'); p.textContent = editor.value ? '검사 대상 특수 문자는 발견되지 않았습니다. 모든 유니코드 문자를 검사하는 것은 아닙니다.' : '글을 입력하면 보이지 않는 문자와 탭을 확인합니다.'; findings.append(p); }
+  for (const item of report.findings) { const p = document.createElement('p'); const strong = document.createElement('strong'); strong.textContent = `${item.name} (${item.code}) ${number(item.count)}개 — `; p.append(strong, document.createTextNode(item.explanation)); findings.append(p); }
+  $('line-summary').textContent = report.lineCount ? `총 ${number(report.lineCount)}줄${report.lineCount > 40 ? ' 중 첫 40줄 표시' : ''}${Number($('line-limit').value) > 0 ? ` · 제한 초과 ${number(report.overLimit)}줄` : ''}. 화면상 자동 줄바꿈은 제외합니다.` : '실제 줄바꿈을 기준으로 줄별 길이를 비교합니다.';
+  const body = $('line-rows'); body.replaceChildren();
+  for (const row of report.rows) { const tr = document.createElement('tr'); const limit = Number($('line-limit').value); for (const value of [row.number, row.characters, row.bytes, limit > 0 ? (row.characters > limit ? '초과' : '이내') : '—']) { const td = document.createElement('td'); td.textContent = typeof value === 'number' ? number(value) : value; tr.append(td); } if (limit > 0 && row.characters > limit) tr.className = 'over'; body.append(tr); }
+  $('duplicates').textContent = report.duplicates.length ? '앞뒤 공백을 제외하고 같은 줄: ' + report.duplicates.map(positions => positions.slice(0,10).join('·') + '행' + (positions.length > 10 ? ` 외 ${number(positions.length - 10)}행` : '')).join(' / ') + '. 최대 10그룹 표시. 반복이 의도된 것인지 확인하세요.' : '같은 줄의 반복은 발견되지 않았습니다. 빈 줄은 비교에서 제외합니다.';
+}
+$('line-limit').addEventListener('input', updateInspection);
+$('normalize').addEventListener('click', () => change(editor.value.normalize('NFC'), 'NFC 정규화를 적용했어요. 되돌리기로 복원할 수 있어요.'));
+$('remove-zero').addEventListener('click', () => change(removeZeroWidthSpaces(editor.value), 'U+200B만 제거했어요. 이모지 결합자와 방향 제어 문자는 유지합니다.'));
+document.querySelectorAll('[data-fixture]').forEach(button => button.addEventListener('click', () => { const fixtures = { unicode: '한 글👨‍👩‍👧‍👦\ne\u0301\né', invisible: '신청\u200b안내\n신청 안내\n신청\u00a0안내\n신청 안내', lines: '제목: 글쓰기 모임\n일시: 토요일 오후 2시\n장소: 2층 열람실\n장소: 2층 열람실' }; change(fixtures[button.dataset.fixture], '점검 예시를 불러왔어요. 기존 글은 되돌리기로 복원할 수 있어요.'); $('inspection').scrollIntoView({block:'start',behavior:'auto'}); }));
 update();

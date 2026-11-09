@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const origin = process.env.SITE_URL || 'https://textnest.pages.dev';
-const routes = ['/', '/guide/', '/about/', '/privacy/', '/guides/character-count/', '/guides/spacing/', '/guides/replace/', '/guides/writing-checklist/', '/ads.txt', '/sitemap.xml', '/robots.txt', '/app.mjs', '/core.mjs', '/style.css', '/favicon.svg'];
+const routes = ['/', '/guide/', '/about/', '/privacy/', '/guides/character-count/', '/guides/spacing/', '/guides/replace/', '/guides/writing-checklist/', '/guides/paste-case-study/', '/lab/', '/method/', '/updates/', '/ads.txt', '/sitemap.xml', '/robots.txt', '/app.mjs', '/core.mjs', '/lab.mjs', '/style.css', '/favicon.svg'];
 for (const route of routes) {
   const res = await fetch(origin + route, { signal: AbortSignal.timeout(20000) });
   assert.equal(res.status, 200, route);
@@ -14,4 +14,4 @@ for (const route of routes) {
 const notFound = await fetch(origin + '/this-page-does-not-exist', { signal: AbortSignal.timeout(20000) });
 assert.equal(notFound.status, 404);
 assert.ok(!(await notFound.text()).includes('adsbygoogle.js'));
-console.log('PASS: all 15 live routes match the built files; missing page returns 404 without ads.');
+console.log(`PASS: all ${routes.length} live routes match the built files; missing page returns 404 without ads.`);

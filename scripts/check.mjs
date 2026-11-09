@@ -25,5 +25,6 @@ for (const file of files.filter(f => f.endsWith('.html'))) {
   }
 }
 assert.equal((await fs.readFile(path.join(root, 'ads.txt'), 'utf8')).trim(), 'google.com, pub-2685311477810917, DIRECT, f08c47fec0942fa0');
-assert.equal(files.filter(f => f.endsWith('.html')).length, 9);
-console.log(`PASS: 9 HTML pages, ${links} internal links/assets/anchors, AdSense tags, ad-free 404, and ads.txt.`);
+assert.equal(files.filter(f => f.endsWith('.html')).length, 13);
+for (const file of ['lab/index.html', 'method/index.html', 'updates/index.html', 'guides/paste-case-study/index.html']) assert.ok(files.includes(path.join(root, file)));
+console.log(`PASS: 13 HTML pages, ${links} internal links/assets/anchors, AdSense tags, ad-free 404, and ads.txt.`);
